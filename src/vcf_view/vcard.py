@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterable, Optional
 
 @dataclass
 class Name:
@@ -34,18 +34,52 @@ class Name:
             self.honorific_suffixes,
         ) if value != ""))
 
+    def to_content(self):
+        yield "Prefix", self.honorific_prefixes
+        yield "First name", self.given_names
+        yield "Middle name", self.additional_names
+        yield "Family name", self.family_names
+        yield "Suffix", self.honorific_suffixes
+
+    def lable_max_width(self):
+        return 11
+
 @dataclass
 class CustomProperty:
     property: str
     parameters: dict[str, str]
     values: list[str]
 
+@dataclass
+class Section:
+    title: str
+    content: Iterable[tuple[str, str]]
+    label_max_width: int
+
 
 class VCard:
-    name: Optional[Name] = None
-    custom_properties: list[CustomProperty] = []
+    def __init__(self):
+        self.name: Optional[Name] = None
+        self.custom_properties: list[CustomProperty] = []
 
     _last_line: Optional[str] = None
 
     def __str__(self) -> str:
         return f"{self.name}"
+
+    def sections(self):
+        if self.name is not None:
+            yield Section(
+                title="Name (parts)",
+                content=self.name.to_content(),
+                label_max_width=self.name.lable_max_width(),
+            ) 
+
+            yield Section(
+                title="Custom fields",
+                content=(
+                    (property.property, ";".join(property.values))
+                    for property in self.custom_properties
+                ),
+                label_max_width=max(len(property.property) for property in self.custom_properties)
+            )

@@ -16,22 +16,50 @@
 
 import argparse
 import curses
+import os
 
 from vcf_view.read_vcf import read_vcf
 from vcf_view.vcard import VCard
 
-def render_content(position: int, offset: int, height: int, cards: list[VCard], content_win):
-    content_win.clear()
-    content_win.border()
+def render_list(position: int, offset: int, height: int, cards: list[VCard], list_win):
+    list_win.clear()
+    list_win.border()
     for i_screen, (i_card, item) in enumerate(list(enumerate(cards))[offset:]):
         if i_screen >= height - 5:
             break
         if i_card == position:
-            content_win.addstr(i_screen + 1, 2, f"> {item}")
+            list_win.addstr(i_screen + 1, 2, f"> {item}")
         else:
-            content_win.addstr(i_screen + 1, 2, f"  {item}")
+            list_win.addstr(i_screen + 1, 2, f"  {item}")
 
-    content_win.refresh()
+    list_win.refresh()
+
+def render_card(card: VCard, height: int, card_win):
+    card_win.clear()
+    card_win.border()
+
+    card_win.addstr(1, 1, f"Contact information for: '{card}'")
+
+    offset = 2
+
+    for section in card.sections():
+        offset += 1
+        if offset >= height - 5:
+            break
+        card_win.addstr(offset, 1, f"=== {section.title} ===")
+        offset += 1
+        for label, value in section.content:
+            if offset >= height - 10:
+                break
+
+            if len(value) > 100:
+                value = value[:100]
+            card_win.addstr(offset, 1, f"{label}:")
+            card_win.addstr(offset, section.label_max_width + 2, value)
+            offset += 1
+
+
+    card_win.refresh()
 
 
 def run():
@@ -52,12 +80,14 @@ def run():
         height, width = stdscr.getmaxyx()
 
         header_height = 3
-        header_win = curses.newwin(header_height, width, 0, 0)
-        content_win = curses.newwin(height - header_height, width, header_height, 0)
+        list_width = 50
+        header_win = curses.newwin(header_height, list_width, 0, 0)
+        list_win = curses.newwin(height - header_height, list_width, header_height, 0)
+        card_win = curses.newwin(height, width - list_width, 0, list_width)
 
         header_win.border()
-        content_win.border()
-        header_win.addstr(1, 1, "Hello World!")
+        card_win.border()
+        header_win.addstr(1, 1, f"File: {os.path.basename(args.filepath)}")
 
         with open(args.filepath) as file:
             cards = list(read_vcf(file))
@@ -69,13 +99,15 @@ def run():
 
         stdscr.refresh()
         header_win.refresh()
+        card_win.refresh()
 
         position = 0
 
         def offset():
             return min(max_offset, max(0, position - (height - header_height) // 2))
 
-        render_content(position, offset(), height, cards, content_win)
+        render_list(position, offset(), height, cards, list_win)
+        render_card(cards[position], height, card_win)
 
         while True:
             char = stdscr.getch()
@@ -83,16 +115,20 @@ def run():
                 break
             elif char == ord("j"):
                 position = min(len(cards) - 1, position + 1)
-                render_content(position, offset(), height, cards, content_win)
+                render_list(position, offset(), height, cards, list_win)
+                render_card(cards[position], height, card_win)
             elif char == ord("k"):
                 position = max(0, position - 1)
-                render_content(position, offset(), height, cards, content_win)
+                render_list(position, offset(), height, cards, list_win)
+                render_card(cards[position], height, card_win)
             elif char == ord("g"):
                 position = 0
-                render_content(position, offset(), height, cards, content_win)
+                render_list(position, offset(), height, cards, list_win)
+                render_card(cards[position], height, card_win)
             elif char == ord("G"):
                 position = len(cards) - 1
-                render_content(position, offset(), height, cards, content_win)
+                render_list(position, offset(), height, cards, list_win)
+                render_card(cards[position], height, card_win)
 
     finally:
         curses.endwin()
