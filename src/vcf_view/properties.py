@@ -18,9 +18,9 @@ import quopri
 
 from abc import abstractmethod
 from inspect import signature, Parameter
-from typing import Literal, Optional, Protocol
+from typing import Any, Literal, Optional, Protocol
 
-from vcf_view.vcard import CustomProperty, Name, VCard
+from vcf_view.vcard import CustomProperty, EmailAddress, Name, PhoneNumber, VCard
 
 class PropertyFunction(Protocol):
     @staticmethod
@@ -104,6 +104,11 @@ class Parser:
         else:
             self._in_x_custom = "currently"
 
+@prop
+def version(card: VCard, version: str, /):
+    card.version = version
+reg("VERSION", version)
+
 
 @prop
 def name(card: VCard, family_names: str, given_names: str, additional_names: str, honorific_prefixes: str, honorific_suffixes: str, /):
@@ -114,6 +119,57 @@ def name(card: VCard, family_names: str, given_names: str, additional_names: str
         honorific_prefixes=honorific_prefixes,
         honorific_suffixes=honorific_suffixes,
     )
-
 reg("N", name)
 
+@prop
+def formatted_name(card: VCard, name: str, /):
+    card.formatted_name = name
+reg("FN", formatted_name)
+
+@prop
+def phone_number(card: VCard, number: str, /, *, PREF: Optional[Any] = None, TYPE: Optional[str] = None, CELL: Optional[Any] = None, WORK: Optional[Any] = None, HOME: Optional[Any] = None):
+    if TYPE is not None:
+        tel_type = TYPE
+    else:
+        tel_types = set()
+        if CELL is not None:
+            tel_types.add("cell")
+            tel_types.add("voice")
+        if WORK is not None:
+            tel_types.add("work")
+            tel_types.add("voice")
+        if HOME is not None:
+            tel_types.add("voice")
+        if len(tel_types) == 0:
+            tel_types.add("voice")
+
+        tel_type = ",".join(sorted(tel_types))
+
+
+    card.phone_numbers.append(PhoneNumber(
+        preferred=PREF is not None,
+        tel_type=tel_type,
+        number=number,
+    ))
+reg("TEL", phone_number)
+
+@prop
+def email_address(card: VCard, address: str, /, *, PREF: Optional[Any] = None, TYPE: Optional[str] = None, HOME: Optional[Any] = None, WORK: Optional[Any] = None):
+    if TYPE is not None:
+        email_type = TYPE
+    else:
+        email_types = set()
+        if WORK is not None:
+            email_types.add("work")
+        if HOME is not None:
+            email_types.add("home")
+
+        email_type = ",".join(sorted(email_types))
+
+
+    card.email_addresses.append(EmailAddress(
+        preferred=PREF is not None,
+        email_type=email_type,
+        address=address,
+    ))
+reg("EMAIL", email_address)

@@ -55,7 +55,7 @@ def render_card(card: VCard, height: int, card_win):
             if len(value) > 100:
                 value = value[:100]
             card_win.addstr(offset, 1, f"{label}:")
-            card_win.addstr(offset, section.label_max_width + 2, value)
+            card_win.addstr(offset, section.label_max_width + 3, value)
             offset += 1
 
 

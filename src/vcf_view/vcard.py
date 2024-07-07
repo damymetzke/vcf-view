@@ -57,15 +57,58 @@ class Section:
     label_max_width: int
 
 
+@dataclass
+class PhoneNumber:
+    preferred: bool
+    tel_type: str
+    number: str
+
+    def __str__(self) -> str:
+        if self.preferred:
+            return f"! ({self.tel_type}) {self.number}"
+        else:
+            return f". ({self.tel_type}) {self.number}"
+
+@dataclass
+class EmailAddress:
+    preferred: bool
+    email_type: str
+    address: str
+
+    def __str__(self) -> str:
+        if self.preferred:
+            return f"! ({self.email_type}) {self.address}"
+        else:
+            return f". ({self.email_type}) {self.address}"
+
+
 class VCard:
     def __init__(self):
+        self.version: Optional[str] = None
+
         self.name: Optional[Name] = None
+        self.formatted_name: Optional[str] = None
+
+        self.phone_numbers: list[PhoneNumber] = []
+        self.email_addresses: list[EmailAddress] = []
+
         self.custom_properties: list[CustomProperty] = []
 
     _last_line: Optional[str] = None
 
     def __str__(self) -> str:
-        return f"{self.name}"
+        if self.formatted_name is not None:
+            return self.formatted_name
+        if self.name is not None:
+            return str(self.name)
+        return "!No name in contact"
+
+    def _contact_content(self):
+        for number in self.phone_numbers:
+            yield "tel", str(number)
+
+        for address in self.email_addresses:
+            yield "email", str(address)
 
     def sections(self):
         if self.name is not None:
@@ -75,6 +118,16 @@ class VCard:
                 label_max_width=self.name.lable_max_width(),
             ) 
 
+        if len(self.phone_numbers) + len(self.email_addresses) > 0:
+            yield Section(
+                title="Contact",
+                content=self._contact_content(),
+                label_max_width=5,
+            )
+
+
+
+        if len(self.custom_properties) > 0:
             yield Section(
                 title="Custom fields",
                 content=(
