@@ -13,3 +13,39 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+from collections.abc import Iterator
+from typing import TextIO
+
+from vcf_view.properties import Parser
+from vcf_view.vcard import VCard
+
+             
+
+def parse_vcard(input: Iterator[str]):
+    card = VCard()
+    parser = Parser(card)
+    for line in input:
+        line = line.rstrip("\n")
+
+        if line == "END:VCARD":
+            parser.flush()
+            return card
+
+        if line.strip() != "":
+            parser.push(line)
+
+    raise Exception("Reached end without closing vcard")
+
+
+
+def read_vcf(input: TextIO):
+
+    input_iter = iter(input)
+
+    for line in input_iter:
+        line = line.rstrip("\n")
+        if line == "BEGIN:VCARD":
+            yield parse_vcard(input_iter)
+
+

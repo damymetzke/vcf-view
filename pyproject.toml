@@ -1,6 +1,6 @@
 [project]
 name = "vcf-view"
-description = "Straight forward viewer for .vcf files"
+description = "Straightforward viewer for .vcf files"
 authors = [
     {name = "Damy Metzke", email = "damy.metzke@gmail.com"},
 ]
@@ -10,6 +10,9 @@ readme = "README-PYTHON.md"
 license = {text = "GPL-3.0-or-later"}
 
 dynamic=["version"]
+
+[project.scripts]
+vcf-view = "vcf_view.tui:run"
 
 [build-system]
 requires = ["pdm-backend"]
